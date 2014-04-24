@@ -1,5 +1,19 @@
+a {
+  color: blue;
+  text-decoration: none; /* no underline */
+}
+
+#chess-board {
+  width: 780px;
+}
+
+.clear {
+  clear: both;
+}
+
 .p4wn-board table{
   border-spacing: 1px;
+  width: 265px;
 }
 
 .p4wn-board td{
@@ -22,11 +36,32 @@
   float: left;
 }
 
-.p4wn-players-list {
+.p4wn-players-list {  
   float: left;
+  width: 100px;
   padding-left: 10px;
   border-right: 1px solid black;
   padding-right: 10px;
+  text-align: center;
+}
+
+.p4wn-log {
+  float: left;
+  padding-right: 10px;
+}
+
+.p4wn-games {
+  float: left;
+  padding: 5px;
+  width: 300px;
+  height: 100%;
+  background-color: #eee;
+  overflow-y: scroll;
+  font-family: verdana;
+}
+
+.verdana {
+  font-family: verdana;
 }
 
 .p4wn-log, .p4wn-players-list {
@@ -47,12 +82,13 @@
   /*border: 1px solid yellow;*/
 }
 
-.p4wn-status {
-  font-family:Courier;
+.p4wn-status {  
+  font-family: verdana;
 }
 
 .p4wn-messages {
-  font-family: monospace;
+  /*font-family: monospace;*/
+  font-family: verdana;
   white-space: pre;
   font-size: smaller;
   overflow: auto;
@@ -61,7 +97,7 @@
 }
 
 .p4wn-send-message {
-  width: 90%;
+  width: 100%;
 }
 
 .p4wn-messages div {

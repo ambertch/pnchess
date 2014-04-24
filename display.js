@@ -1,12 +1,15 @@
 (function() {
 
-    var VERSION = '1.04';
+    var VERSION = '1.05';
 
     var ROOM = (location.href.match(/room=([^&]+)/)||['']).slice(-1)[0] || prompt('Chess Room Name?')
 
-    var CHESS_CHANNEL_NAME = 'chess-' + VERSION + '-' + ROOM;
+    var CHESS_CHANNEL_NAME = 'pnchess-' + VERSION + '-' + ROOM;
 
     var YOUR_NAME = (location.href.match(/nick=([^&]+)/)||['']).slice(-1)[0] || prompt('Your name?');
+
+    var WHITE_PLAYER = 0;
+    var BLACK_PLAYER = 1;
 
     var chatters = { };
 
@@ -38,6 +41,12 @@
           fn.apply(context, args);
         }
       };
+    };
+
+    if (!Array.prototype.last){
+        Array.prototype.last = function(){
+            return this[this.length - 1];
+        };
     };
 
     var get_all_history = function(args) {
@@ -73,21 +82,24 @@
         messages = data;
       }
       for (var idx in messages) {
-        if (messages[idx].type === 'move') {
-          if (type === 'subscribe' && messages[idx].uuid === pubnub.get_uuid()) {
+        msg = messages[idx];
+        if (msg.type === 'move') {
+          if (type === 'subscribe' && msg.uuid === pubnub.get_uuid()) {
             return;
           }
-          game.move(messages[idx].start,messages[idx].end,messages[idx].promotion,messages[idx].uuid);
-        } else if (messages[idx].type === 'chat') {
-          var msg = '<' + (new Date(messages[idx].date)).toLocaleString() + '> [' + messages[idx].name + '] : ' + messages[idx].msg;
+          game.move(msg.start,msg.end,msg.promotion,msg.uuid);
+        } else if (msg.type === 'chat') {
+          var msg = '<' + (new Date(msg.date)).toLocaleString() + '> [' + msg.name + '] : ' + msg.msg;
           game.messages(msg);
-        } else if (messages[idx].type === 'start_moving_piece' && type === 'subscribe' && messages[idx].uuid !== pubnub.get_uuid()) {
-          game.start_moving_piece(messages[idx].position, messages[idx].uuid);
-        } else if (messages[idx].type === 'stop_moving_piece' && type === 'subscribe' && messages[idx].uuid !== pubnub.get_uuid()) {
-          game.stop_moving_piece(messages[idx].uuid);
-        } else if (messages[idx].type === 'adjust_moving_piece' && type === 'subscribe' && messages[idx].uuid !== pubnub.get_uuid()) {
-          game.adjust_moving_piece(messages[idx].x,messages[idx].y);
-        } else if (messages[idx].type === 'new_game') {
+        } else if (msg.type === 'start_moving_piece' && type === 'subscribe' && msg.uuid !== pubnub.get_uuid()) {
+          game.start_moving_piece(msg.position, msg.uuid);
+        } else if (msg.type === 'stop_moving_piece' && type === 'subscribe' && msg.uuid !== pubnub.get_uuid()) {
+          game.stop_moving_piece(msg.uuid);
+        } else if (msg.type === 'adjust_moving_piece' && type === 'subscribe' && msg.uuid !== pubnub.get_uuid()) {
+          game.adjust_moving_piece(msg.x,msg.y);
+        } else if (msg.type === 'display_games') {
+          game.games(msg);
+        } else if (msg.type === 'new_game') {
           game = p4wnify("chess-board");
           game.redrawChatters(chatters);
           game.refresh();
@@ -99,7 +111,7 @@
       pubnub.state({
         channel : CHESS_CHANNEL_NAME,
         uuid : uuid,
-        callback : function(data) {
+        callback : function(data) {            
           if (data.hasOwnProperty('name')) {
             chatters[uuid] = data.name
             game.redrawChatters(chatters);
@@ -112,22 +124,22 @@
     var refreshChatters = function() {
       pubnub.here_now({
         channel : CHESS_CHANNEL_NAME,
-        callback : function(msg) {
-          for (var idx in msg.uuids) {
+        callback : function(msg) {          
+          for (var idx in msg.uuids) {            
             getChatterState(msg.uuids[idx]);
           }
         }
       });
     };
 
-    var parsePubNubPresence = function(message) {
+    var parsePubNubPresence = function(message) {        
       if (message.action === 'join' && message.hasOwnProperty('data')) {
         chatters[message.uuid] = message.data.name;
         game.redrawChatters(chatters);
       } else if (message.action === 'join' && !message.hasOwnProperty('data')) {
         setTimeout(function() {
           getChatterState(message.uuid);
-        }, 1500);
+        }, 2000);
       } else if (message.action === 'leave' || message.action === 'timeout') {
         chatters[message.uuid] = null;
         delete chatters[message.uuid];
@@ -153,33 +165,39 @@
       state : {
         name: YOUR_NAME
       },
+      connect : function() {
+        pubnub.$('room-name').innerHTML = ROOM;
+        pubnub.$('person-name').innerHTML = YOUR_NAME;
+        pubnub.here_now({
+            callback : function(data){
+                game.games(data);                
+            }
+        });
+      },
       message : function(message) {
-        parsePubnubMessage(message, 'subscribe');
+        parsePubnubMessage(message, 'subscribe');            
       },
       presence : function(message) {
         parsePubNubPresence(message);
       }
-    });
+    });    
 
     sendChatMessage('has joined!');
 
     setTimeout(function() {
-
       refreshChatters();
-
       get_all_history({
           channel  : CHESS_CHANNEL_NAME,
           callback : function(messages) {
             parsePubnubMessage(messages.reverse(), 'history');
           }
-      });
-
-    },1500);
+      });      
+    },1000);
 
     var newGame = function() {
       pubnub.publish({
         channel : CHESS_CHANNEL_NAME,
-        message : {
+        message : {            
           type : 'new_game'
         }
       });
@@ -205,6 +223,7 @@
     var P4WN_SEND_MESSSAGE_CLASS = 'p4wn-send-message';
     var P4WN_STATUS_CLASS = 'p4wn-status';
     var P4WN_LOG_CLASS = 'p4wn-log';
+    var P4WN_GAMES_CLASS = 'p4wn-games'
     var P4WN_PLAYERS_LIST_CLASS = 'p4wn-players-list';
     var P4WN_BLACK_SQUARE = 'p4wn-black-square';
     var P4WN_WHITE_SQUARE = 'p4wn-white-square';
@@ -281,10 +300,9 @@
 
         if (do_not_broadcast) {
             uuid = do_not_broadcast;
-        }
-
+        }    
         if (this.locked_players[this.board_state.to_play] === false) {
-            this.locked_players[this.board_state.to_play] = uuid;
+            this.locked_players[this.board_state.to_play] = uuid;            
         } else if (this.locked_players[this.board_state.to_play] !== uuid) {
             this.messages('Someone has already claimed this color, please claim another color or spectate');
             return false;
@@ -294,7 +312,16 @@
         var move_result = state.move(start, end, promotion);
         if(move_result.ok){
             if (!do_not_broadcast) {
-                pubnub.publish({'channel':CHESS_CHANNEL_NAME,'message':{type:'move',start:start,end:end,promotion:promotion,uuid:pubnub.get_uuid()}});
+                pubnub.publish({
+                    'channel': CHESS_CHANNEL_NAME,
+                    'message': {
+                        type:'move',
+                        start: start,
+                        end: end,
+                        promotion: promotion,
+                        uuid: pubnub.get_uuid()
+                    }
+                });
             }
             this.display_move_text(state.moveno, move_result.string);
             this.refresh();
@@ -348,6 +375,19 @@
         sounds.play('chat');
     }
 
+    _p4d_proto.games = function(msg){
+        var div = this.elements.games;
+        var totalGames = msg.total_channels;
+        var html = "<div><b>" + totalGames + " current games</b> <i>(click to join)</i><div></div>";        
+        var games = msg.channels;        
+        for (var game in games) {
+           var occupancy = games[game].occupancy;
+           var gameName = game.split("-").last();
+           html += "<div><a href='index.html?nick=" + YOUR_NAME + "&room=" + game + "'>" + gameName + "</a></div>"
+        }
+        div.innerHTML = html;
+    }
+
     _p4d_proto.redrawChatters = function(msg){
         var div = this.elements.players_list;
         div.innerHTML = '';
@@ -371,7 +411,7 @@
         }
         if (chatters) {
             var uuid = this.locked_players[this.board_state.to_play];
-            var color = this.board_state.to_play === 0 ? 'WHITE' : 'BLACK';
+            var color = this.board_state.to_play === WHITE_PLAYER ? 'WHITE' : 'BLACK';
             var name = chatters[uuid] ? chatters[uuid] : false;
             if (name) {
                 this.status(color + "'s turn : (" + name + ")");
@@ -500,6 +540,7 @@
         this.elements.board = p4d_new_child(inner, "div", P4WN_BOARD_CLASS);
         this.elements.players_list = p4d_new_child(inner, "div", P4WN_PLAYERS_LIST_CLASS);
         this.elements.log = p4d_new_child(inner, "div", P4WN_LOG_CLASS);
+        this.elements.games = p4d_new_child(inner, "div", P4WN_GAMES_CLASS);
         this.elements.send_message = p4d_new_child(inner, "input", P4WN_SEND_MESSSAGE_CLASS);
         this.elements.messages = p4d_new_child(inner, "div", P4WN_MESSAGES_CLASS);
         this.start = 0;
@@ -524,7 +565,7 @@
 
     function p4wnify(id){
         var p4d = new P4wn_display(id);
-        var e = p4d.elements;
+        var e = p4d.elements;        
         var board_height = (8 * (P4WN_SQUARE_HEIGHT + 3)) + 'px';
         e.inner.style.height = board_height;
         e.log.style.height = board_height;
