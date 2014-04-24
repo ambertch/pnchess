@@ -4,7 +4,7 @@
 // -----------------------------------------------------------------------
 var sounds = (function(){
     var soundbank = {}
-    ,   p         = PUBNUB;
+    ,   p         = PUBNUB;    
 
     function stop(audio) {
         if (!audio) return;
@@ -23,8 +23,7 @@ var sounds = (function(){
                 var audio = soundbank[sound] = p.create('audio');
 
                 p.css( audio, { display : 'none' } );
-
-                p.attr( audio, 'prelaod', 'auto' );
+                p.attr( audio, 'preload', 'auto' );
                 p.attr( audio, 'autoplay', 'true' );
 
                 audio.innerHTML = p.supplant(
@@ -58,4 +57,6 @@ var sounds = (function(){
             } );
         }
     };
+
+
 })();
