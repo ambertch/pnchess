@@ -162,9 +162,9 @@
     pubnub.subscribe({
       noheresync : true,
       channel : CHESS_CHANNEL_NAME,
-      state : {
-        name: YOUR_NAME
-      },
+      // state : {
+      //   name: YOUR_NAME
+      // },
       connect : function() {
         pubnub.$('room-name').innerHTML = ROOM;
         pubnub.$('person-name').innerHTML = YOUR_NAME;
@@ -181,6 +181,13 @@
         parsePubNubPresence(message);
       }
     });    
+
+
+    pubnub.state({
+        channel : CHESS_CHANNEL_NAME,
+        uuid : pubnub.get_uuid(),
+        state: {name: "akdjahsd"}
+    })
 
     sendChatMessage('has joined!');
 
