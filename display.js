@@ -390,7 +390,7 @@
         for (var game in games) {
            var occupancy = games[game].occupancy;
            var gameName = game.split("-").last();
-           html += "<div><a href='index.html?nick=" + YOUR_NAME + "&room=" + game + "'>" + gameName + "</a></div>"
+           html += "<div><a href='index.html?nick=" + YOUR_NAME + "&room=" + gameName + "'>" + gameName + "</a></div>"
         }
         div.innerHTML = html;
     }
